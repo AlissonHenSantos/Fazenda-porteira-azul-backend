@@ -9,7 +9,7 @@ def hello():
     return "Hello World!"
 
 from .user import urls
-
+from .cultura import urls
 
 
 if __name__ == "__main__":

@@ -1,8 +1,8 @@
-from sqlalchemy import inspect
 from .. import db 
+from sqlalchemy import inspect
 
 
-class user(db.Model):
+class User(db.Model):               
     id           = db.Column(db.String(50), primary_key=True, nullable=False, unique=True)
 
     email        = db.Column(db.String(100), nullable=False, unique=True)

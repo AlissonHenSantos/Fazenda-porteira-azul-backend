@@ -1,6 +1,9 @@
 import os
+from datetime import timedelta
 class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = True
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-here')  # Change in production!
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
 class DevelopmentConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
