@@ -77,7 +77,7 @@ def update_horasFuncionario_controller(horasFuncionario_id):
     data = _get_request_data()
     horasFuncionario = HorasFuncionario.query.get(horasFuncionario_id)
     if not horasFuncionario:
-        return jsonify({'error': 'Hora funcionario not found'}), 404
+        return jsonify({'error': 'Horas funcionario not found'}), 404
 
     if 'horas' in data:
         try:

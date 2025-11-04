@@ -2,7 +2,7 @@ from .. import db
 from sqlalchemy import inspect
 
 
-class Maquina(db.Model):               
+class Maquinario(db.Model):               
     id           = db.Column(db.String(50), primary_key=True, nullable=False, unique=True)
 
     maquina        = db.Column(db.String(100), nullable=False, unique=True)

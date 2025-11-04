@@ -3,7 +3,7 @@ from flask import request, jsonify, abort
 import uuid
 
 from .. import db
-from .models import Maquina
+from .models import Maquinario
 
 def _get_request_data():
     if request.is_json:
@@ -11,7 +11,7 @@ def _get_request_data():
     return request.form.to_dict()
 
 def list_all_maquina_controller():
-    maquina = Maquina.query.all()
+    maquina = Maquinario.query.all()
     response = []
     for u in maquina:
         response.append(u.toDict())
@@ -25,7 +25,7 @@ def create_maquina_controller():
         return jsonify({'error': 'Missing fields', 'missing': missing}), 400
 
     id = str(uuid.uuid4())
-    new_maquina = Maquina(
+    new_maquina = Maquinario(
         id=id,
         maquina=data['maquina'],  
     )
@@ -35,14 +35,14 @@ def create_maquina_controller():
     return jsonify(new_maquina.toDict()), 201
 
 def retrieve_maquina_controller(maquina_id):
-    maquina = Maquina.query.get(maquina_id)
+    maquina = Maquinario.query.get(maquina_id)
     if not maquina:
         return jsonify({'error': 'Maquina not found'}), 404
     return jsonify(maquina.toDict())
 
 def update_maquina_controller(maquina_id):
     data = _get_request_data()
-    maquina = Maquina.query.get(maquina_id)
+    maquina = Maquinario.query.get(maquina_id)
     if not maquina:
         return jsonify({'error': 'Maquina not found'}), 404
 

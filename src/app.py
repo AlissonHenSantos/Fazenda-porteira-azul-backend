@@ -14,6 +14,7 @@ from .maquinario import urls
 from .cotacao_cultura import urls
 from .funcionario import urls
 from .horas_funcionario import urls
+from .uso_maquinario import urls
 
 
 if __name__ == "__main__":
