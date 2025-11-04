@@ -10,6 +10,8 @@ def hello():
 
 from .user import urls
 from .cultura import urls
+from .maquinario import urls
+from .cotacao_cultura import urls
 
 
 if __name__ == "__main__":
