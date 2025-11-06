@@ -14,7 +14,7 @@ class UsoMaquinario(db.Model):
 
     tempo_uso   = db.Column(db.Integer, nullable=False) 
 
-    data_uso  = db.Column(db.Date, default=lambda: datetime.now().date())
+    data_uso  = db.Column(db.Date, default=datetime.now)
 
     def toDict(self):
         result = {}

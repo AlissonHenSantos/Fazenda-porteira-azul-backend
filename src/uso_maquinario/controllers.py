@@ -1,6 +1,7 @@
 # ...existing code...
 from flask import request, jsonify, abort
 import uuid
+from datetime import datetime, date
 
 from .. import db
 from .models import UsoMaquinario
@@ -24,12 +25,32 @@ def create_usoMaquinario_controller():
     if missing:
         return jsonify({'error': 'Missing fields', 'missing': missing}), 400
 
+    try:
+        tempo_uso = float(data['tempo_uso'])
+    except (ValueError, TypeError):
+        return jsonify({'error': 'tempo_uso deve ser um número'}), 400
+
+    if 'data_uso' in data and data['data_uso']:
+        dt_raw = data['data_uso']
+        date_obj = None
+        for fmt in ('%d-%m-%Y'):
+            try:
+                date_obj = datetime.strptime(dt_raw, fmt).date()
+                break
+            except (ValueError, TypeError):
+                continue
+        if date_obj is None:
+            return jsonify({'error': 'Formato de data inválido. Use DD-MM-YYYY'}), 400
+    else:
+        date_obj = datetime.utcnow().date()
+
     id = str(uuid.uuid4())
     new_usoMaquinario = UsoMaquinario(
         id=id,
         idCultura=data['idCultura'],
         idMaquinario=data['idMaquinario'],
-        tempo_uso=data['tempo_uso'],
+        tempo_uso=tempo_uso,
+        data_uso=date_obj
     )
     db.session.add(new_usoMaquinario)
     db.session.commit()
