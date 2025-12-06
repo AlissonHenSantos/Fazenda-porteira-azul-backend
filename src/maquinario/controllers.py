@@ -54,7 +54,7 @@ def update_maquina_controller(maquina_id):
     return jsonify(maquina.toDict())
 
 def delete_maquina_controller(maquina_id):
-    maquina = maquina.query.get(maquina_id)
+    maquina = Maquinario.query.get(maquina_id)
     if not maquina:
         return jsonify({'error': 'maquina not found'}), 404
     db.session.delete(maquina)

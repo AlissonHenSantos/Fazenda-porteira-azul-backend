@@ -10,11 +10,38 @@ def _get_request_data():
         return request.get_json(silent=True) or {}
     return request.form.to_dict()
 
+def _get_cultura_name_from_instance(obj, idCultura):
+    # tenta relacionamento first, depois tenta consultar o modelo Cultura
+    try:
+        if hasattr(obj, 'cultura') and getattr(obj, 'cultura') is not None:
+            cultura_obj = getattr(obj, 'cultura')
+            return getattr(cultura_obj, 'nome', getattr(cultura_obj, 'name', None))
+    except Exception:
+        pass
+
+    # fallback: tentar importar e buscar pela FK
+    try:
+        from ..cultura.models import Cultura
+        c = Cultura.query.get(idCultura)
+        if c:
+            return getattr(c, 'nome', getattr(c, 'name', None))
+    except Exception:
+        pass
+
+    # último recurso: retorna o id
+    return idCultura
+
 def list_all_funcionario_controller():
     funcionario = Funcionario.query.all()
     response = []
     for u in funcionario:
-        response.append(u.toDict())
+        d = u.toDict()
+        idCultura = d.get('idCultura')
+        cultura_name = _get_cultura_name_from_instance(u, idCultura)
+        # remover idCultura e adicionar campo 'cultura' com o nome
+        d.pop('idCultura', None)
+        d['cultura'] = cultura_name
+        response.append(d)
     return jsonify(response)
 
 def create_funcionario_controller():
@@ -33,13 +60,22 @@ def create_funcionario_controller():
     db.session.add(new_funcionario)
     db.session.commit()
 
-    return jsonify(new_funcionario.toDict()), 201
+    d = new_funcionario.toDict()
+    cultura_name = _get_cultura_name_from_instance(new_funcionario, d.get('idCultura'))
+    d.pop('idCultura', None)
+    d['cultura'] = cultura_name
+
+    return jsonify(d), 201
 
 def retrieve_funcionario_controller(funcionario_id):
     funcionario = Funcionario.query.get(funcionario_id)
     if not funcionario:
         return jsonify({'error': 'Funcionario not found'}), 404
-    return jsonify(funcionario.toDict())
+    d = funcionario.toDict()
+    cultura_name = _get_cultura_name_from_instance(funcionario, d.get('idCultura'))
+    d.pop('idCultura', None)
+    d['cultura'] = cultura_name
+    return jsonify(d)
 
 def update_funcionario_controller(funcionario_id):
     data = _get_request_data()
@@ -53,7 +89,12 @@ def update_funcionario_controller(funcionario_id):
 
     db.session.commit()
 
-    return jsonify(funcionario.toDict())
+    d = funcionario.toDict()
+    cultura_name = _get_cultura_name_from_instance(funcionario, d.get('idCultura'))
+    d.pop('idCultura', None)
+    d['cultura'] = cultura_name
+
+    return jsonify(d)
 
 def delete_funcionario_controller(funcionario_id):
     funcionario = Funcionario.query.get(funcionario_id)
@@ -62,3 +103,4 @@ def delete_funcionario_controller(funcionario_id):
     db.session.delete(funcionario)
     db.session.commit()
     return '', 204
+# ...existing code...

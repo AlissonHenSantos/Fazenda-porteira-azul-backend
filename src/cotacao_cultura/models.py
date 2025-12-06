@@ -5,7 +5,9 @@ from sqlalchemy import inspect
 class CotacaoCultura(db.Model):               
     id           = db.Column(db.String(50), primary_key=True, nullable=False, unique=True)
 
-    value        = db.Column(db.Double(100), nullable=False)
+    precoAtual        = db.Column(db.Double(100), nullable=False)
+    precoAlvoVenda  = db.Column(db.Double(100), nullable=False)
+    variacao24h  = db.Column(db.Double(100), nullable=False)
     
     idCultura    = db.Column(db.String(50), db.ForeignKey('cultura.id'), nullable=False)
     cultura      = db.relationship('Cultura', backref=db.backref('cotacoes', lazy=True))

@@ -53,7 +53,7 @@ def update_user_controller(user_id):
     # update only provided fields
     if 'email' in data: user.email = data['email']
     if 'username' in data: user.username = data['username']
-    if 'password' in data: user.password = data['password']
+    if 'password' in data:  user.password=generate_password_hash(data['password']).decode('utf-8')
 
     db.session.commit()
 

@@ -1,4 +1,3 @@
-# ...existing code...
 from flask import request, jsonify, abort
 import uuid
 from datetime import datetime, timedelta
@@ -10,6 +9,32 @@ def _get_request_data():
     if request.is_json:
         return request.get_json(silent=True) or {}
     return request.form.to_dict()
+
+def _get_related_name(obj, rel_attr_name, model_path, model_name, name_attr='nome', fk_field=None):
+    try:
+        rel = getattr(obj, rel_attr_name, None)
+        if rel is not None:
+            return getattr(rel, name_attr, getattr(rel, 'name', None)) or rel
+    except Exception:
+        pass
+
+    try:
+        module = __import__(model_path, fromlist=[model_name])
+        Model = getattr(module, model_name)
+        fk = None
+        if fk_field and hasattr(obj, fk_field):
+            fk = getattr(obj, fk_field)
+        candidate = f"id{rel_attr_name.capitalize()}"
+        if fk is None and hasattr(obj, candidate):
+            fk = getattr(obj, candidate)
+        if fk:
+            related = Model.query.get(fk)
+            if related:
+                return getattr(related, name_attr, getattr(related, 'name', fk))
+    except Exception:
+        pass
+
+    return fk if 'fk' in locals() else None
 
 def _check_weekly_hours(funcionario_id, new_hours):
     today = datetime.now().date()
@@ -32,7 +57,11 @@ def list_all_horasFuncionario_controller():
     horasFuncionario = HorasFuncionario.query.all()
     response = []
     for u in horasFuncionario:
-        response.append(u.toDict())
+        d = u.toDict()
+        funcionario_nome = _get_related_name(u, 'funcionario', 'src.funcionario.models', 'Funcionario', 'nome', fk_field='idFuncionario')
+        d.pop('idFuncionario', None)
+        d['funcionario'] = funcionario_nome
+        response.append(d)
     return jsonify(response)
 
 def create_horasFuncionario_controller():
@@ -65,13 +94,22 @@ def create_horasFuncionario_controller():
     db.session.add(new_horasFuncionario)
     db.session.commit()
 
-    return jsonify(new_horasFuncionario.toDict()), 201
+    d = new_horasFuncionario.toDict()
+    funcionario_nome = _get_related_name(new_horasFuncionario, 'funcionario', 'src.funcionario.models', 'Funcionario', 'nome', fk_field='idFuncionario')
+    d.pop('idFuncionario', None)
+    d['funcionario'] = funcionario_nome
+
+    return jsonify(d), 201
 
 def retrieve_horasFuncionario_controller(horasFuncionario_id):
     horasFuncionario = HorasFuncionario.query.get(horasFuncionario_id)
     if not horasFuncionario:
         return jsonify({'error': 'Horas Funcionario not found'}), 404
-    return jsonify(horasFuncionario.toDict())
+    d = horasFuncionario.toDict()
+    funcionario_nome = _get_related_name(horasFuncionario, 'funcionario', 'src.funcionario.models', 'Funcionario', 'nome', fk_field='idFuncionario')
+    d.pop('idFuncionario', None)
+    d['funcionario'] = funcionario_nome
+    return jsonify(d)
 
 def update_horasFuncionario_controller(horasFuncionario_id):
     data = _get_request_data()
@@ -101,7 +139,11 @@ def update_horasFuncionario_controller(horasFuncionario_id):
         horasFuncionario.idFuncionario = data['idFuncionario']
 
     db.session.commit()
-    return jsonify(horasFuncionario.toDict())
+    d = horasFuncionario.toDict()
+    funcionario_nome = _get_related_name(horasFuncionario, 'funcionario', 'src.funcionario.models', 'Funcionario', 'nome', fk_field='idFuncionario')
+    d.pop('idFuncionario', None)
+    d['funcionario'] = funcionario_nome
+    return jsonify(d)
 
 def delete_horasFuncionario_controller(funcionario_id):
     horasFuncionario = HorasFuncionario.query.get(funcionario_id)

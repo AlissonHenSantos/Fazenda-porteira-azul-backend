@@ -1,29 +1,26 @@
 from .. import db 
 from sqlalchemy import inspect
-from datetime import datetime, date
-
 
 class UsoMaquinario(db.Model):               
-    id           = db.Column(db.String(50), primary_key=True, nullable=False, unique=True)
+    __tablename__ = 'uso_maquinario'
+    
+    id            = db.Column(db.String(50), primary_key=True, nullable=False, unique=True)
+    idMaquinario  = db.Column(db.String(50), db.ForeignKey('maquinario.id'), nullable=False)
+    idFuncionario = db.Column(db.String(50), db.ForeignKey('funcionario.id'), nullable=False)
+    data_inicio   = db.Column(db.DateTime, nullable=False)
+    data_fim      = db.Column(db.DateTime, nullable=True)
 
-    idCultura    = db.Column(db.String(50), db.ForeignKey('cultura.id'), nullable=False)
-    cultura      = db.relationship('Cultura', backref=db.backref('uso_maquinario', lazy=True))
-
-    idMaquinario    = db.Column(db.String(50), db.ForeignKey('maquinario.id'), nullable=False)
-    maquinario      = db.relationship('Maquinario', backref=db.backref('uso_maquinario', lazy=True))
-
-    tempo_uso   = db.Column(db.Integer, nullable=False) 
-
-    data_uso  = db.Column(db.Date, default=lambda: datetime.now().date())
+    maquinario    = db.relationship('Maquinario', backref='usos')
+    funcionario   = db.relationship('Funcionario', backref='usos_maquinario')
 
     def toDict(self):
-        result = {}
-        for c in inspect(self).mapper.column_attrs:
-            value = getattr(self, c.key)
-            if isinstance(value, (datetime, date)):
-                value = value.strftime('%d-%m-%Y')
-            result[c.key] = value
-        return result
+        return {
+            'id': self.id,
+            'idMaquinario': self.idMaquinario,
+            'idFuncionario': self.idFuncionario,
+            'data_inicio': self.data_inicio.isoformat() if self.data_inicio else None,
+            'data_fim': self.data_fim.isoformat() if self.data_fim else None,
+        }
 
     def __repr__(self):
-        return f"<UsoMaquinario: {self.tempo_uso}h em {self.data_uso} - Maquinario: {self.idMaquinario}>"
+        return f'<UsoMaquinario {self.id}>'
