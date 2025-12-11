@@ -1,105 +1,123 @@
-# ...existing code...
-from flask import request, jsonify, abort
+from flask import request, jsonify
 import uuid
-
+from datetime import datetime
 from .. import db
 from .models import CotacaoCultura
+from ..cultura.models import Cultura
 
 def _get_request_data():
     if request.is_json:
         return request.get_json(silent=True) or {}
     return request.form.to_dict()
 
-def _get_cultura_name_from_instance(obj, idCultura):
+def list_all_cotacoes_controller():
     try:
-        if hasattr(obj, 'cultura') and getattr(obj, 'cultura') is not None:
-            cultura_obj = getattr(obj, 'cultura')
-            return getattr(cultura_obj, 'nome', getattr(cultura_obj, 'name', None))
-    except Exception:
-        pass
+        cotacoes = CotacaoCultura.query.order_by(CotacaoCultura.dataAtualizacao.desc()).all()
+        return jsonify([c.toDict() for c in cotacoes]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-    try:
-        from ..cultura.models import Cultura
-        c = Cultura.query.get(idCultura)
-        if c:
-            return getattr(c, 'nome', getattr(c, 'name', None))
-    except Exception:
-        pass
-
-    return idCultura
-
-def list_all_cotacaoCultura_controller():
-    cotacaoCultura = CotacaoCultura.query.all()
-    response = []
-    for u in cotacaoCultura:
-        d = u.toDict()
-        idCultura = d.get('idCultura')
-        cultura_name = _get_cultura_name_from_instance(u, idCultura)
-        d.pop('idCultura', None)
-        d['cultura'] = cultura_name
-        response.append(d)
-    return jsonify(response)
-
-def create_cotacaoCultura_controller():
+def create_cotacao_controller():
     data = _get_request_data()
-    required = ['precoAtual', 'idCultura', 'precoAlvoVenda', 'variacao24h']
-    missing = [k for k in required if k not in data]
+    
+    required = ['idCultura', 'precoAtual']
+    missing = [k for k in required if k not in data or data[k] == '']
     if missing:
-        return jsonify({'error': 'Missing fields', 'missing': missing}), 400
+        return jsonify({'error': 'Missing required fields', 'missing': missing}), 400
+    
+    try:
+        cultura = Cultura.query.get(data['idCultura'])
+        if not cultura:
+            return jsonify({'error': 'Cultura not found'}), 404
+        
+        id = str(uuid.uuid4())
+        nova_cotacao = CotacaoCultura(
+            id=id,
+            idCultura=data['idCultura'],
+            precoAtual=float(data['precoAtual']),
+            precoAlta=float(data['precoAlta']) if data.get('precoAlta') else None,
+            precoBaixa=float(data['precoBaixa']) if data.get('precoBaixa') else None
+        )
+        
+        db.session.add(nova_cotacao)
+        db.session.commit()
+        
+        return jsonify(nova_cotacao.toDict()), 201
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({'error': f'Invalid data type: {str(e)}'}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
-    id = str(uuid.uuid4())
-    new_cotacaoCultura = CotacaoCultura(
-        id=id,
-        precoAtual=float(data['precoAtual']),
-        precoAlvoVenda=float(data['precoAlvoVenda']),
-        variacao24h=float(data['variacao24h']),
-        idCultura=data['idCultura'],
-    )
-    db.session.add(new_cotacaoCultura)
-    db.session.commit()
+def retrieve_cotacao_controller(cotacao_id):
+    try:
+        cotacao = CotacaoCultura.query.get(cotacao_id)
+        if not cotacao:
+            return jsonify({'error': 'Cotação not found'}), 404
+        return jsonify(cotacao.toDict()), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-    d = new_cotacaoCultura.toDict()
-    cultura_name = _get_cultura_name_from_instance(new_cotacaoCultura, d.get('idCultura'))
-    d.pop('idCultura', None)
-    d['cultura'] = cultura_name
-
-    return jsonify(d), 201
-
-def retrieve_cotacaoCultura_controller(cotacaoCultura_id):
-    cotacaoCultura = CotacaoCultura.query.get(cotacaoCultura_id)
-    if not cotacaoCultura:
-        return jsonify({'error': 'Cotação not found'}), 404
-    d = cotacaoCultura.toDict()
-    cultura_name = _get_cultura_name_from_instance(cotacaoCultura, d.get('idCultura'))
-    d.pop('idCultura', None)
-    d['cultura'] = cultura_name
-    return jsonify(d)
-
-def update_cotacaoCultura_controller(cotacaoCultura_id):
+def update_cotacao_controller(cotacao_id):
     data = _get_request_data()
-    cotacaoCultura = CotacaoCultura.query.get(cotacaoCultura_id)
-    if not cotacaoCultura:
-        return jsonify({'error': 'Cotação not found'}), 404
+    
+    try:
+        cotacao = CotacaoCultura.query.get(cotacao_id)
+        if not cotacao:
+            return jsonify({'error': 'Cotação not found'}), 404
+        
+        if 'precoAtual' in data and data['precoAtual'] != '':
+            cotacao.precoAtual = float(data['precoAtual'])
+        
+        if 'precoAlta' in data and data['precoAlta'] != '':
+            cotacao.precoAlta = float(data['precoAlta'])
+        
+        if 'precoBaixa' in data and data['precoBaixa'] != '':
+            cotacao.precoBaixa = float(data['precoBaixa'])
+        
+        db.session.commit()
+        return jsonify(cotacao.toDict()), 200
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({'error': f'Invalid data type: {str(e)}'}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
-    if 'precoAtual' in data: cotacaoCultura.precoAtual = float(data['precoAtual'])
-    if 'precoAlvoVenda' in data: cotacaoCultura.precoAlvoVenda = float(data['precoAlvoVenda'])
-    if 'variacao24h' in data: cotacaoCultura.variacao24h = float(data['variacao24h'])
-    if 'idCultura' in data: cotacaoCultura.idCultura = data['idCultura']
+def delete_cotacao_controller(cotacao_id):
+    try:
+        cotacao = CotacaoCultura.query.get(cotacao_id)
+        if not cotacao:
+            return jsonify({'error': 'Cotação not found'}), 404
+        
+        db.session.delete(cotacao)
+        db.session.commit()
+        
+        return '', 204
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
-    db.session.commit()
+def get_cotacao_by_cultura_controller(cultura_id):
+    try:
+        cotacoes = CotacaoCultura.query.filter_by(idCultura=cultura_id).order_by(
+            CotacaoCultura.dataAtualizacao.desc()
+        ).all()
+        
+        return jsonify([c.toDict() for c in cotacoes]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-    d = cotacaoCultura.toDict()
-    cultura_name = _get_cultura_name_from_instance(cotacaoCultura, d.get('idCultura'))
-    d.pop('idCultura', None)
-    d['cultura'] = cultura_name
-
-    return jsonify(d)
-
-def delete_cotacaoCultura_controller(cotacaoCultura_id):
-    cotacaoCultura = CotacaoCultura.query.get(cotacaoCultura_id)
-    if not cotacaoCultura:
-        return jsonify({'error': 'Cotação not found'}), 404
-    db.session.delete(cotacaoCultura)
-    db.session.commit()
-    return '', 204
-# ...existing code...
+def get_cotacao_atual_controller(cultura_id):
+    try:
+        cotacao = CotacaoCultura.query.filter_by(idCultura=cultura_id).order_by(
+            CotacaoCultura.dataAtualizacao.desc()
+        ).first()
+        
+        if not cotacao:
+            return jsonify({'error': 'No cotation data found for this culture'}), 404
+        
+        return jsonify(cotacao.toDict()), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
